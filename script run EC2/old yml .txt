@@ -1,0 +1,114 @@
+name: Node.js CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest  # Specifies that the job should run on the latest Ubuntu virtual environment provided by GitHub
+    defaults:
+      run:
+        working-directory: './Tsoa with Express' # Adjust this to the root directory of your Node.js project
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4  # This step checks out your repository under $GITHUB_WORKSPACE, so your workflow can access it
+        with:
+          fetch-depth: 0  # Ensures all branches and tags are fetched, useful for versioning or other git-related operations
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4  # This step sets up a Node.js environment with a specified version
+        with:
+          node-version: '20'  # Specify the Node.js version you require, e.g., '14', '16'
+
+      - name: Install dependencies
+        working-directory: './Tsoa with Express'
+        run: yarn install  # Runs yarn install to install all dependencies defined in your package.json
+
+      - name: Run build
+        working-directory: './Tsoa with Express'
+        run: yarn build  # Executes the build script defined in your package.json
+
+      - name: Run tests
+        working-directory: './Tsoa with Express'
+        env:
+          MONGODB_URL: ${{ secrets.MONGODB_URL }}  # Replace with actual environment variables needed for testing
+        run: yarn test  # Executes tests using yarn. Customize this command based on your test runner
+
+      - name: Archive build artifacts
+        uses: actions/upload-artifact@v4  # Archives build artifacts for use in later jobs or for deployment
+        with:
+          name: artifact-name  # Optionally change the name of the artifact
+          path: ./Tsoa with Express/build  # Adjust this to where your build outputs artifacts, e.g., './build'
+
+  deploy:
+            runs-on: ubuntu-latest  # Specifies that the job should run on the latest Ubuntu virtual environment provided by GitHub
+            needs: build  # Specifies that this job needs the 'build' job to complete successfully before it starts
+            if: github.ref == 'refs/heads/main'  # This job runs only if the push or PR merge is to the 'main' branch
+        
+            steps:
+              - name: Download build artifacts
+                uses: actions/download-artifact@v4  # Downloads artifacts from the build job
+                with:
+                  name: build  # The name of the artifact to download
+                  path: ./Tsoa with Express/build  # The path to store the downloaded artifact
+        
+              - name: Prepare Deployment Directories
+                uses: appleboy/ssh-action@master  # SSH into the server to prepare directories
+                with:
+                  host: ${{ secrets.SERVER_IP }}  # Server IP address from secrets
+                  username: ${{ secrets.SERVER_USERNAME }}  # Server username from secrets
+                  key: ${{ secrets.SSH_KEY }}  # SSH private key from secrets
+                  port: 22  # SSH port, usually 22
+                  script: |
+                    mkdir -p /home/ubuntu/Project/API_Test/build  # Change to match your desire directory structure
+                    mkdir -p /home/ubuntu/Project/API_Test/build/configs  # For additional configuration files
+        
+              - name: Copy files to Server
+                uses: appleboy/scp-action@master  # Copies files to the server using SCP
+                with:
+                  host: ${{ secrets.SERVER_IP }}
+                  username: ${{ secrets.SERVER_USERNAME }}
+                  key: ${{ secrets.SSH_KEY }}
+                  port: 22
+                  source: "./path/to/artifacts/*"
+                  target: "/home/ubuntu/Project/API_Test/build"
+                  strip_components: 1  # Adjust based on the directory depth of the source
+        
+              - name: Create .env File
+                uses: appleboy/ssh-action@master  # Creates an environment variable file on the server
+                with:
+                  host: ${{ secrets.SERVER_IP }}
+                  username: ${{ secrets.SERVER_USERNAME }}
+                  key: ${{ secrets.SSH_KEY }}
+                  port: 22
+                  script: |
+                    echo "NODE_ENV=production" > /path/to/deployment/directory/build/.env
+                    echo "PORT=your_port_number" >> /path/to/deployment/directory/build/.env
+                    echo "DATABASE_URL=your_database_url" >> /path/to/deployment/directory/build/.env
+        
+              - name: Install Dependencies and Restart Application
+                uses: appleboy/ssh-action@master  # Installs dependencies and restarts the application using a process manager
+                with:
+                  host: ${{ secrets.SERVER_IP }}
+                  username: ${{ secrets.SERVER_USERNAME }}
+                  key: ${{ secrets.SSH_KEY }}
+                  port: 22
+                  script: |
+                    cd /Project/API_Test/build
+                    yarn install --production
+                    # Assume PM2 is used, Replace with other command for other process manager
+                    # Assume you have script for run start in production and restart in production
+                    # Check if the PM2 process is running
+                    if pm2 show your-service-name > /dev/null; then
+                      echo "Application is running. Restarting..."
+                      yarn restart
+                    else
+                      echo "Application is not running. Starting..."
+                      yarn start
+                    fi
+
+                    

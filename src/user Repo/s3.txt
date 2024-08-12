@@ -1,0 +1,25 @@
+    // uploadImage(da: any): any {
+    //     throw new Error("Method not implemented.");
+    // }
+
+//     async uploadImage(fileName: string, file: Express.Multer.File,id?:string,_Body?:BodyRequest): Promise<any> {
+//         const uploadParams: PutObjectCommandInput = {
+//             Bucket: "my-testing-monny",
+//             Key: fileName,
+//             Body: file.buffer,
+//             ContentType: file.mimetype,
+//         };
+
+// let namefile=`https://my-testing-monny.s3.amazonaws.com/${fileName}`    
+// console.log(namefile);
+    
+        
+//         try {
+//             await s3.send(new PutObjectCommand(uploadParams));
+//             return UserModel.findByIdAndUpdate(id, { new: true,file:fileName }).exec();
+
+//         } catch (error) {
+//             console.error('Error uploading file to S3:', error);
+//             throw new Error('Error uploading file to S3');
+//         }
+//     }

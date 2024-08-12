@@ -1,0 +1,7 @@
+ssh -i "key-ec2.pem" ubuntu@ec2-54-196-46-90.compute-1.amazonaws.com
+
+
+
+'bash -s '<run-install.sh
+
+

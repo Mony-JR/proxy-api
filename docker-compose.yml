@@ -1,0 +1,17 @@
+version: '3.8'
+services:
+   backend_sample:
+    container_name: backend_sample_container_2
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    restart: always
+    ports:
+      - 8092:3000
+    env_file: ./src/configs/.env.development
+    environment:
+      - DOCKER_ENV=true
+    volumes:
+      - ./src:/app/src
+      - /app/node_modules
+    command: nodemon --watch src --ext ts,js,json --legacy-watch --exec ts-node src/server.ts
